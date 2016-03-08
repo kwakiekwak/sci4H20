@@ -6,16 +6,20 @@ var express       = require('express'), // call express
     app           = express(), // define our app using express
     bodyParser    = require('body-parser'), // get body-parser
     morgan        = require('morgan'), // used to see requests(logger)
-    mongoose      = require('mongoose'), // for working w/ our databases MongoDB
-    port          = process.env.PORT || 8080; // set the port for our app
+    mongoose      = require('mongoose'); // for working w/ our databases MongoDB
+
+var path = require('path');
 
 // require the User models
-var User = require('./models/user');
+var User = require('./app/models/user');
 
-// connect to our local database and name it sci4H20
-mongoose.connect('mongodb://localhost:27017/sci4H20');
+// require the configt file
+var config = require('./config');
+
 
 // APP CONFIGURATION
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
 // user body parser so we can grab information from POST requests
 app.use(bodyParser.urlencoded({extended: true }));
 app.use(bodyParser.json());
@@ -33,45 +37,43 @@ app.use(function(req, res, next) {
 // log all requests to the console
 app.use(morgan('dev'));
 
+// connect to our local database and name it sci4H20
+mongoose.connect(config.database);
+
+// set static files location
+// used for requests that our frontend will make
+app.use(express.static(__dirname + '/public'));
+
+
 // ROUTES FOR OUR API
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-// basic route for the home page
-// checking to see if everything works
-app.get('/', function(req, res) {
-  res.send('Welcome to the home page!');
-});
 
-// get an instance of the express router
-var apiRouter = express.Router(); // get an instance of the express Router
-
-// middeware to user for all requests
-apiRouter.use(function(req, res, next) {
-  // do loggin
-  console.log('Somebody just came to our app!');
-
-  // we'll add more to the middleware in Chapter 10
-  // this is where we will authenticate users
-
-
-  next(); // make sure we go to the next routes and don't stop here
-})
-
-// test route to make sure everything is working
-// accessed at GET http://localhost:8080/api
-apiRouter.get('/', function(req, res) {
-  res.json({message: 'Hooray! welcome to our api!'});
-});
-
-// more routes for our API will happen here
-
-
+// API ROUTES
+// require api.js in the app/routes/api.js
+var apiRouter = require('./app/routes/api')(app, express);
 // REGISTER OUR ROUTES
 // all of our routes will be prefixed with /api
 app.use('/api', apiRouter);
 
+// IMPORTANT to put this route AFTER the API routes since we only want it to catch routes not handled by NODE
+// MAIN CATCHALL
+// SEND USERS TO
+// has to be registered after API ROUTES
+app.get('*', function(req, res) {
+res.sendFile(path.join(__dirname + '/public/app/views/index.html'));
+});
+
+
 // START THE SERVER
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-app.listen(port);
-console.log('Starting on port ' + port);
+app.listen(config.port);
+console.log('Starting on port ' + config.port);
+
+
+// Create a Secrete to Create Tokens with (and verify)
+// moved to the config.js
+// var secret = 'ilovescotchyscotch';
+// or superSecret
+// var superSecret = 'ilovescotchscotchyscotchscotch'
